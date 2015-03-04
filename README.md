@@ -8,7 +8,7 @@ So long as you don't back up the config file online, we still preserve the essen
 You need [Google Go](http://golang.org/doc/install) installed. To install govpn use go install:
 
 ```
-go install github.com/davelondon/govpn
+go get github.com/davelondon/govpn
 ```
 
 This will install the govpn command in your path. Then start it:
