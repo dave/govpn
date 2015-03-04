@@ -17,7 +17,6 @@ import (
 
 	"code.google.com/p/go.crypto/nacl/secretbox"
 	"code.google.com/p/go.crypto/ssh/terminal"
-	"github.com/atotto/clipboard"
 	"github.com/dgryski/dgoogauth"
 	"github.com/seehuhn/password"
 )
@@ -43,9 +42,7 @@ func main() {
 	config, err := readConfigFromFile()
 
 	if err != nil {
-
-		fmt.Print("Can't find config file (or error loading)... We will make a new config file...\n")
-
+		fmt.Print("Can't find config file (or error loading)... We will make a new config file...\n\n")
 		config = getConfigFromUser()
 	}
 
@@ -69,16 +66,16 @@ func connect(config PlainConfig) {
 	for scanner.Scan() {
 
 		codeNow := dgoogauth.ComputeCode(config.Secret, int64(time.Now().Unix()/30))
-		code2 := dgoogauth.ComputeCode(config.Secret, int64(time.Now().Add(time.Second*2).Unix()/30))
-		code5 := dgoogauth.ComputeCode(config.Secret, int64(time.Now().Add(time.Second*5).Unix()/30))
-		code10 := dgoogauth.ComputeCode(config.Secret, int64(time.Now().Add(time.Second*10).Unix()/30))
+		//code2 := dgoogauth.ComputeCode(config.Secret, int64(time.Now().Add(time.Second*2).Unix()/30))
+		//code5 := dgoogauth.ComputeCode(config.Secret, int64(time.Now().Add(time.Second*5).Unix()/30))
+		//code10 := dgoogauth.ComputeCode(config.Secret, int64(time.Now().Add(time.Second*10).Unix()/30))
 
-		fmt.Printf("Code now    : %06d (starting VPN with this)\n", codeNow)
-		fmt.Printf("Code in 2s  : %06d (copied to clipboard)\n", code2)
-		fmt.Printf("Code in 5s  : %06d\n", code5)
-		fmt.Printf("Code in 10s : %06d\n", code10)
+		//fmt.Printf("Code now    : %06d (starting VPN with this)\n", codeNow)
+		//fmt.Printf("Code in 2s  : %06d (copied to clipboard)\n", code2)
+		//fmt.Printf("Code in 5s  : %06d\n", code5)
+		//fmt.Printf("Code in 10s : %06d\n", code10)
 
-		clipboard.WriteAll(fmt.Sprint(code2))
+		//clipboard.WriteAll(fmt.Sprint(code2))
 		cmd := exec.Command("scutil", "--nc", "start", config.VpnName, "--user", config.Username, "--password", config.Password+fmt.Sprintf("%06d", codeNow))
 		err := cmd.Start()
 		if err != nil {
@@ -92,7 +89,8 @@ func connect(config PlainConfig) {
 		}
 
 		fmt.Print("\n")
-		fmt.Print("Press enter to get a new code and start the VPN again\n")
+		//fmt.Print("Press enter to get a new code and start the VPN again\n")
+		fmt.Print("Press enter to start the VPN again\n")
 
 	}
 
@@ -106,7 +104,8 @@ func getFilename() string {
 
 func getConfigFromUser() PlainConfig {
 
-	fmt.Print("This will ask you for a bunch of details, and encrypt the result in a config file: " + getFilename() + " \n")
+	fmt.Print("This will ask you for a bunch of details, and encrypt the result in a config file: " + getFilename() + " \n\n")
+	fmt.Print("Please do not back this file up online. The point of 2 factor auth is that you need one thing you know (your encryption password) and one physical thing you have (your laptop). If you back up the config file online, you no longer need something physical.\n\n")
 
 	fmt.Print("Enter an encryption password. All the following details will be encrypted with this password\n")
 	password1, err := password.Read("")
