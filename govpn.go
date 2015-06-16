@@ -16,10 +16,15 @@ import (
 	"time"
 
 	"code.google.com/p/go.crypto/nacl/secretbox"
-	"code.google.com/p/go.crypto/ssh/terminal"
 	"github.com/dgryski/dgoogauth"
 	"github.com/seehuhn/password"
+	"github.com/atotto/clipboard"
+	"flag"
 )
+
+//Secretbox demo: http://play.golang.org/p/SRq2AqA4Dz
+//terminal: http://godoc.org/code.google.com/p/go.crypto/ssh/terminal
+//gob encoding http://play.golang.org/p/frZq8YbcAb
 
 type EncryptedConfig struct {
 	Data  []byte
@@ -33,16 +38,23 @@ type PlainConfig struct {
 	Secret   string
 }
 
+var clipFlag = flag.Bool("clip", false, "Copy password and code to clipboard (useful for OSX Yosemite with broken scutil)")
+//var configFlag = flag.Bool("config", false, "Decrypt and print config")
+
 func main() {
 
-	//Secretbox demo: http://play.golang.org/p/SRq2AqA4Dz
-	//terminal: http://godoc.org/code.google.com/p/go.crypto/ssh/terminal
-	//gob encoding http://play.golang.org/p/frZq8YbcAb
+	fmt.Println("In OSX Yosemite, I've found the scutil command is broken, so it won't accept the password parameter properly... This causes the VPN not to start and a password dialog to appear. If this is the case for you, use the -clip flag. This will copy your password / auth code to the clipboard each time we attempt to start the VPN. Just paste into the password dialog and the VPN should start correctly.\n")
+
+	flag.Parse()
 
 	config, err := readConfigFromFile()
 
+	//if *configFlag {
+	//	fmt.Printf("%#v\n\n", config)
+	//}
+
 	if err != nil {
-		fmt.Print("Can't find config file (or error loading)... We will make a new config file...\n\n")
+		fmt.Println("Can't find config file (or error loading)... We will make a new config file...\n")
 		config = getConfigFromUser()
 	}
 
@@ -61,36 +73,31 @@ func SingleSHA(b []byte) [32]byte {
 
 func connect(config PlainConfig) {
 
-	fmt.Print("Press enter to start VPN\n")
+	fmt.Println("Press enter to start VPN")
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 
 		codeNow := dgoogauth.ComputeCode(config.Secret, int64(time.Now().Unix()/30))
-		//code2 := dgoogauth.ComputeCode(config.Secret, int64(time.Now().Add(time.Second*2).Unix()/30))
-		//code5 := dgoogauth.ComputeCode(config.Secret, int64(time.Now().Add(time.Second*5).Unix()/30))
-		//code10 := dgoogauth.ComputeCode(config.Secret, int64(time.Now().Add(time.Second*10).Unix()/30))
+		fmt.Printf("Code: %06d\n", codeNow)
 
-		//fmt.Printf("Code now    : %06d (starting VPN with this)\n", codeNow)
-		//fmt.Printf("Code in 2s  : %06d (copied to clipboard)\n", code2)
-		//fmt.Printf("Code in 5s  : %06d\n", code5)
-		//fmt.Printf("Code in 10s : %06d\n", code10)
-
-		//clipboard.WriteAll(fmt.Sprint(code2))
 		cmd := exec.Command("scutil", "--nc", "start", config.VpnName, "--user", config.Username, "--password", config.Password+fmt.Sprintf("%06d", codeNow))
 		err := cmd.Start()
 		if err != nil {
 			log.Fatal(err)
 		}
+
 		err = cmd.Wait()
 		if err != nil {
-			fmt.Print("Error while starting VPN. Is it already running?\n")
+			fmt.Println("Error while starting VPN.")
 		} else {
-			fmt.Print("VPN starting...\n")
+			fmt.Println("VPN starting...")
+			if *clipFlag {
+				fmt.Println("Password and auth code copied to clipboard.")
+				clipboard.WriteAll(config.Password+fmt.Sprintf("%06d", codeNow))
+			}
 		}
 
-		fmt.Print("\n")
-		//fmt.Print("Press enter to get a new code and start the VPN again\n")
-		fmt.Print("Press enter to start the VPN again\n")
+		fmt.Println("\nPress enter to start the VPN again.")
 
 	}
 
@@ -104,17 +111,17 @@ func getFilename() string {
 
 func getConfigFromUser() PlainConfig {
 
-	fmt.Print("This will ask you for a bunch of details, and encrypt the result in a config file: " + getFilename() + " \n\n")
-	fmt.Print("Please do not back this file up online. The point of 2 factor auth is that you need one thing you know (your encryption password) and one physical thing you have (your laptop). If you back up the config file online, you no longer need something physical.\n\n")
+	fmt.Println("This will ask you for a bunch of details, and encrypt the result in a config file: " + getFilename() + " \n")
+	fmt.Println("Please do not back this file up online. The point of 2 factor auth is that you need one thing you know (your encryption password) and one physical thing you have (your laptop). If you back up the config file online, you no longer need something physical.\n")
 
-	fmt.Print("Enter an encryption password. All the following details will be encrypted with this password\n")
+	fmt.Println("Enter an encryption password. All the following details will be encrypted with this password")
 	password1, err := password.Read("")
 
 	if err != nil || len(password1) == 0 {
 		log.Fatal(err)
 	}
 
-	fmt.Print("Enter your encryption password again\n")
+	fmt.Println("Enter your encryption password again")
 	password2, err := password.Read("")
 
 	if err != nil || len(password2) == 0 {
@@ -122,13 +129,13 @@ func getConfigFromUser() PlainConfig {
 	}
 
 	if string(password1) != string(password2) {
-		fmt.Print("Passwords don't match.\n")
+		fmt.Println("Passwords don't match.")
 		os.Exit(1)
 	}
 
 	buf := bufio.NewReader(os.Stdin)
 
-	fmt.Print("When you set up your OSX native VPN, what name did you give it?\n")
+	fmt.Println("When you set up your OSX native VPN, what name did you give it?")
 	vpnName, err := buf.ReadString('\n')
 	vpnName = vpnName[:len(vpnName)-1]
 
@@ -138,7 +145,7 @@ func getConfigFromUser() PlainConfig {
 
 	buf = bufio.NewReader(os.Stdin)
 
-	fmt.Print("What is your VPN username?\n")
+	fmt.Println("What is your VPN username?")
 	vpnUsername, err := buf.ReadString('\n')
 	vpnUsername = vpnUsername[:len(vpnUsername)-1]
 
@@ -146,7 +153,7 @@ func getConfigFromUser() PlainConfig {
 		log.Fatal(err)
 	}
 
-	fmt.Print("What is your VPN password?\n")
+	fmt.Println("What is your VPN password?")
 	vpnPassword, err := password.Read("")
 
 	if err != nil || len(vpnPassword) == 0 {
@@ -155,7 +162,7 @@ func getConfigFromUser() PlainConfig {
 
 	buf = bufio.NewReader(os.Stdin)
 
-	fmt.Print("What is your Google Authenticator Secret?\n")
+	fmt.Println("What is your Google Authenticator Secret?")
 	googleSecret, err := password.Read("")
 
 	if err != nil || len(googleSecret) == 0 {
@@ -190,7 +197,7 @@ func readConfigFromFile() (PlainConfig, error) {
 		return config, err
 	}
 
-	fmt.Print("Great! found your config. What is your encryption password?\n")
+	fmt.Println("Great! found your config. What is your encryption password?")
 	password, _ := password.Read("")
 	key := SingleSHA(password)
 
@@ -245,18 +252,4 @@ func saveConfigToFile(encryptionPassword []byte, config PlainConfig) {
 
 	return
 
-}
-
-func StringPrompt() (password string, err error) {
-	state, err := terminal.MakeRaw(0)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer terminal.Restore(0, state)
-	term := terminal.NewTerminal(os.Stdout, "")
-	password, err = term.ReadLine()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return
 }
