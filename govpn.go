@@ -15,15 +15,15 @@ import (
 	"os/user"
 	"time"
 
-	"code.google.com/p/go.crypto/nacl/secretbox"
+	"golang.org/x/crypto/nacl/secretbox"
+	"flag"
+	"github.com/atotto/clipboard"
 	"github.com/dgryski/dgoogauth"
 	"github.com/seehuhn/password"
-	"github.com/atotto/clipboard"
-	"flag"
 )
 
 //Secretbox demo: http://play.golang.org/p/SRq2AqA4Dz
-//terminal: http://godoc.org/code.google.com/p/go.crypto/ssh/terminal
+//terminal: http://godoc.org/golang.org/x/crypto/nacl/secretbox
 //gob encoding http://play.golang.org/p/frZq8YbcAb
 
 type EncryptedConfig struct {
@@ -38,20 +38,21 @@ type PlainConfig struct {
 	Secret   string
 }
 
-var clipFlag = flag.Bool("clip", false, "Copy password and code to clipboard (useful for OSX Yosemite with broken scutil)")
-//var configFlag = flag.Bool("config", false, "Decrypt and print config")
+//var clipFlag = flag.Bool("clip", false, "Copy password and code to clipboard (useful for OSX Yosemite with broken scutil)")
+
+var configFlag = flag.Bool("config", false, "Decrypt and print config")
 
 func main() {
 
-	fmt.Println("In OSX Yosemite, I've found the scutil command is broken, so it won't accept the password parameter properly... This causes the VPN not to start and a password dialog to appear. If this is the case for you, use the -clip flag. This will copy your password / auth code to the clipboard each time we attempt to start the VPN. Just paste into the password dialog and the VPN should start correctly.\n")
+	//fmt.Println("In OSX Yosemite, I've found the scutil command is broken, so it won't accept the password parameter properly... This causes the VPN not to start and a password dialog to appear. If this is the case for you, use the -clip flag. This will copy your password / auth code to the clipboard each time we attempt to start the VPN. Just paste into the password dialog and the VPN should start correctly.\n")
 
 	flag.Parse()
 
 	config, err := readConfigFromFile()
 
-	//if *configFlag {
-	//	fmt.Printf("%#v\n\n", config)
-	//}
+	if *configFlag {
+		fmt.Printf("%#v\n\n", config)
+	}
 
 	if err != nil {
 		fmt.Println("Can't find config file (or error loading)... We will make a new config file...\n")
@@ -91,10 +92,8 @@ func connect(config PlainConfig) {
 			fmt.Println("Error while starting VPN.")
 		} else {
 			fmt.Println("VPN starting...")
-			if *clipFlag {
-				fmt.Println("Password and auth code copied to clipboard.")
-				clipboard.WriteAll(config.Password+fmt.Sprintf("%06d", codeNow))
-			}
+			fmt.Println("Password and auth code copied to clipboard.")
+			clipboard.WriteAll(config.Password + fmt.Sprintf("%06d", codeNow))
 		}
 
 		fmt.Println("\nPress enter to start the VPN again.")

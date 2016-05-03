@@ -27,14 +27,3 @@ The first time it runs, it will prompt you for:
 This data will be encrypted and stored in ```~/.govpn-config.json```. 
 
 Simply press enter to connect or re-connect to te VPN.
-
-Starting from OSX Yosemite
-------------------
-
-We use the OSX "scutil" command to start the VPN. This allows us to specify the password with a command line flag. This worked fine until Yosemite, when it stopped working. It now ignores the password and opens a password dialog. If this happens for you, use the -clip flag:
-
-```
-govpn -clip
-```
-
-... this will copy your password / auth code to the clipboard each time we attempt to start the VPN. Just paste into the password dialog and the VPN should start correctly.
