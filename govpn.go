@@ -15,11 +15,11 @@ import (
 	"os/user"
 	"time"
 
-	"golang.org/x/crypto/nacl/secretbox"
 	"flag"
 	"github.com/atotto/clipboard"
 	"github.com/dgryski/dgoogauth"
 	"github.com/seehuhn/password"
+	"golang.org/x/crypto/nacl/secretbox"
 )
 
 //Secretbox demo: http://play.golang.org/p/SRq2AqA4Dz
