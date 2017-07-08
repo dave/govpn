@@ -11,11 +11,11 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
 	"os/user"
 	"time"
 
 	"flag"
+
 	"github.com/atotto/clipboard"
 	"github.com/dgryski/dgoogauth"
 	"github.com/seehuhn/password"
@@ -32,7 +32,6 @@ type EncryptedConfig struct {
 }
 
 type PlainConfig struct {
-	VpnName  string
 	Username string
 	Password string
 	Secret   string
@@ -74,29 +73,29 @@ func SingleSHA(b []byte) [32]byte {
 
 func connect(config PlainConfig) {
 
-	fmt.Println("Press enter to start VPN")
+	fmt.Println("Press enter to generate a password / code")
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 
 		codeNow := dgoogauth.ComputeCode(config.Secret, int64(time.Now().Unix()/30))
 		fmt.Printf("Code: %06d\n", codeNow)
 
-		cmd := exec.Command("scutil", "--nc", "start", config.VpnName, "--user", config.Username, "--password", config.Password+fmt.Sprintf("%06d", codeNow))
-		err := cmd.Start()
-		if err != nil {
-			log.Fatal(err)
-		}
+		//cmd := exec.Command("scutil", "--nc", "start", config.VpnName, "--user", config.Username, "--password", config.Password+fmt.Sprintf("%06d", codeNow))
+		//err := cmd.Start()
+		//if err != nil {
+		//	log.Fatal(err)
+		//}
 
-		err = cmd.Wait()
-		if err != nil {
-			fmt.Println("Error while starting VPN.")
-		} else {
-			fmt.Println("VPN starting...")
-			fmt.Println("Password and auth code copied to clipboard.")
-			clipboard.WriteAll(config.Password + fmt.Sprintf("%06d", codeNow))
-		}
+		//err = cmd.Wait()
+		//if err != nil {
+		//	fmt.Println("Error while starting VPN.")
+		//} else {
+		//	fmt.Println("VPN starting...")
+		fmt.Println("Password and auth code copied to clipboard.")
+		clipboard.WriteAll(config.Password + fmt.Sprintf("%06d", codeNow))
+		//}
 
-		fmt.Println("\nPress enter to start the VPN again.")
+		fmt.Println("\nPress enter to generate a new password / code.")
 
 	}
 
@@ -134,16 +133,6 @@ func getConfigFromUser() PlainConfig {
 
 	buf := bufio.NewReader(os.Stdin)
 
-	fmt.Println("When you set up your OSX native VPN, what name did you give it?")
-	vpnName, err := buf.ReadString('\n')
-	vpnName = vpnName[:len(vpnName)-1]
-
-	if err != nil || len(vpnName) == 0 {
-		log.Fatal(err)
-	}
-
-	buf = bufio.NewReader(os.Stdin)
-
 	fmt.Println("What is your VPN username?")
 	vpnUsername, err := buf.ReadString('\n')
 	vpnUsername = vpnUsername[:len(vpnUsername)-1]
@@ -169,7 +158,6 @@ func getConfigFromUser() PlainConfig {
 	}
 
 	config := PlainConfig{
-		VpnName:  vpnName,
 		Username: vpnUsername,
 		Password: string(vpnPassword),
 		Secret:   string(googleSecret),
@@ -197,8 +185,8 @@ func readConfigFromFile() (PlainConfig, error) {
 	}
 
 	fmt.Println("Great! found your config. What is your encryption password?")
-	password, _ := password.Read("")
-	key := SingleSHA(password)
+	pwd, _ := password.Read("")
+	key := SingleSHA(pwd)
 
 	var opened []byte
 	opened, ok := secretbox.Open(opened, fc.Data, &fc.Nonce, &key)
